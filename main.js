@@ -3,7 +3,7 @@
 // ===============================
 
 // Số lượng ảnh trong thư mục /images (
-const IMAGE_COUNT = 24;
+const IMAGE_COUNT = 50;
 
 // Biến lưu dữ liệu từ lovedata.json
 let loveDataMap = {};
@@ -12,7 +12,7 @@ let loveDataMap = {};
 async function loadLoveData() {
   try {
     const response = await fetch('lovedata.json');
-    const data = await response.json();
+    const data = await response.json(); 
     
     // Tạo map để dễ tra cứu caption theo id ảnh
     // Hỗ trợ cả hai định dạng: mảng ở root OR { photos: [...] }
@@ -37,47 +37,47 @@ function getCaptionFromData(photoId) {
   return loveDataMap[photoId] || `Khoảnh khắc #${photoId}`;
 }
 
-// Cho phép xen lẫn ảnh & video
-// - Mặc định: type = "image"
-// - Với những id bạn muốn là video, khai báo thêm trong videoConfig
-// THÊM MỚI: Chèn caption trực tiếp vào đây
-const videoConfig = {
-  5: {
-    src: "videos/5.mp4",
-    caption: "Video kỷ niệm chúng mình đi chơi ở Đà Lạt ❤️"
-  },
-  12: {
-    src: "videos/12.mp4",
-    caption: "Lúc em đang tập làm video bằng DaVinci Resolve nè!"
+// Tất cả phần tử đều là ảnh từ thư mục images
+// Verifica se é .png ou .jpg
+async function getImageUrl(id) {
+  // Tenta .png primeiro, depois .jpg
+  const extensions = ['png', 'jpg'];
+  for (const ext of extensions) {
+    const url = `images/${id}.${ext}`;
+    try {
+      const response = await fetch(url, { method: 'HEAD' });
+      if (response.ok) return url;
+    } catch (e) {}
   }
-};
+  return `images/${id}.jpg`; // fallback padrão
+}
 
-const photos = Array.from({ length: IMAGE_COUNT }, (_, index) => {
-  const id = index + 1;
-
-  if (videoConfig[id]) {
-    // PHẦN TỬ LÀ VIDEO
-    return {
-      id,
-      type: "video",
-      src: videoConfig[id].src,      // đường dẫn file .mp4
-      caption: videoConfig[id].caption || getCaptionFromData(id),
-    };
+// Criar array de fotos com extensões corretas
+async function initPhotos() {
+  const photos = [];
+  for (let i = 1; i <= IMAGE_COUNT; i++) {
+    const src = await getImageUrl(i);
+    photos.push({
+      id: i,
+      type: "image",
+      src: src,
+      caption: getCaptionFromData(i),
+    });
   }
+  return photos;
+}
 
-  // PHẦN TỬ LÀ ẢNH (mặc định)
-  return {
-    id,
-    type: "image",
-    src: `images/${id}.jpg`,
-    caption: getCaptionFromData(id),
-  };
-});
+let photos = [];
+
+// Tất cả phần tử đều là ảnh, không cần tạo thumbnail
 
 
 // Story timing
 let STORY_FRAME_DURATION = 4000; // ms
 const STORY_TRANSITION = 650;
+
+// Track current media to cleanup handlers when changing frames
+let currentMediaEl = null;
 
 // Ending text
 const ENDING_TEXT = "Happy Valentine’s Day ❤️";
@@ -333,17 +333,22 @@ function updateFairyFromHeart() {
 }
 
 window.addEventListener("load", async () => {
-  // Load dữ liệu từ JSON trước
+  // Inicializar fotos com extensões corretas
+  photos = await initPhotos();
+  
+  // Load dữ liệu từ JSON
   await loadLoveData();
   
-  // Rebuild photos array với caption từ JSON
+  // Cập nhật caption từ JSON
   photos.forEach((photo) => {
     photo.caption = getCaptionFromData(photo.id);
   });
   
   updateFairyFromHeart();
   initFairyDust();
-  buildHeartCollage();  // Gọi sau khi data sẵn sàng
+  buildHeartCollage();
+  
+  // Bắt đầu countdown
   runIntroCountdown();
 });
 
@@ -529,53 +534,56 @@ function updateProgressBar() {
   progressBarEl.style.width = `${progress}%`;
 }
 
-function showStoryFrame(index) {
+function showStoryFrame(index, options = {}) {
   if (!photos.length) return;
   storyIndex = (index + photos.length) % photos.length;
 
   const item = photos[storyIndex];
 
+  // Cleanup previous image
+  if (currentMediaEl) {
+    try {
+      currentMediaEl.onload = null;
+      currentMediaEl.onerror = null;
+    } catch (e) {}
+  }
+
   // XÓA media cũ trong container
   storyMediaContainer.innerHTML = "";
 
-  // Tạo phần tử media mới: img hoặc video
-  let mediaEl;
-  if (item.type === "video") {
-    // VIDEO
-    mediaEl = document.createElement("video");
-    mediaEl.src = item.src;
-    mediaEl.autoplay = true; // tự phát khi slide tới
-    mediaEl.loop = true;     // lặp lại liên tục
-    mediaEl.muted = true;    // tắt tiếng để auto-play trên browser
-    mediaEl.playsInline = true; // cho mobile
-    mediaEl.setAttribute("controls", ""); // NẾU BẠN KHÔNG MUỐN controls, xoá dòng này
-    // Nếu bạn muốn KHÔNG có controls, dùng:
-    // mediaEl.removeAttribute("controls");
-  } else {
-    // ẢNH
-    mediaEl = document.createElement("img");
-    mediaEl.src = item.src;
-    mediaEl.alt = item.caption || `Memory ${storyIndex + 1}`;
-  }
+  // Tạo phần tử ảnh
+  const mediaEl = document.createElement("img");
+  mediaEl.src = item.src;
+  mediaEl.alt = item.caption || `Memory ${storyIndex + 1}`;
 
-  // Thêm class/animation chung (CSS đã set cho img & video)
   storyMediaContainer.appendChild(mediaEl);
+
+  // Track current media for cleanup and behavior logic
+  currentMediaEl = mediaEl;
 
   // Reset trạng thái animation
   mediaEl.style.transition = "none";
-  mediaEl.style.opacity = "0";
-  mediaEl.style.transform = "scale(1.03)";
-  void mediaEl.offsetWidth;
+  // If instant option requested, show without animation
+  if (options.instant) {
+    mediaEl.style.opacity = "1";
+    mediaEl.style.transform = "scale(1)";
+  } else {
+    mediaEl.style.opacity = "0";
+    mediaEl.style.transform = "scale(1.03)";
+    void mediaEl.offsetWidth;
+  }
 
   // Cập nhật caption
   storyCaptionEl.textContent = item.caption || "";
 
-  // Bật animation fade-in
-  mediaEl.style.transition = `opacity ${STORY_TRANSITION}ms ease-out, transform ${STORY_TRANSITION}ms ease-out`;
-  requestAnimationFrame(() => {
-    mediaEl.style.opacity = "1";
-    mediaEl.style.transform = "scale(1)";
-  });
+  // Bật animation fade-in (bỏ nếu instant)
+  if (!options.instant) {
+    mediaEl.style.transition = `opacity ${STORY_TRANSITION}ms ease-out, transform ${STORY_TRANSITION}ms ease-out`;
+    requestAnimationFrame(() => {
+      mediaEl.style.opacity = "1";
+      mediaEl.style.transform = "scale(1)";
+    });
+  }
 
   // Ẩn ending text nếu đang hiện
   endingTextEl.style.opacity = "0";
@@ -584,11 +592,11 @@ function showStoryFrame(index) {
   updateProgressBar();
 }
 
-
 function scheduleNextFrame() {
   if (!storyRunning || storyPaused) return;
   if (storyTimer) clearTimeout(storyTimer);
 
+  // Đặt timer để tự động chuyển frame tiếp theo
   storyTimer = setTimeout(() => {
     if (!storyRunning || storyPaused) return;
     const nextIndex = storyIndex + 1;
@@ -622,17 +630,15 @@ function startStoryMode() {
 }
 
 function showEndingFrame() {
+  // Show the final photo simply like other frames with no extra effects
   storyRunning = false;
   if (storyTimer) clearTimeout(storyTimer);
-
-  storyImageEl.style.opacity = "0.3";
-  storyImageEl.style.transform = "scale(1.02)";
-
-  setTimeout(() => {
-    endingTextEl.style.opacity = "1";
-    endingTextEl.style.transform = "translateY(0) scale(1)";
-    endingTextEl.classList.add("pulse");
-  }, 400);
+  // Display last photo instantly (no transition/effect)
+  const lastIndex = Math.max(0, photos.length - 1);
+  showStoryFrame(lastIndex, { instant: true });
+  // Ensure ending text is hidden
+  endingTextEl.style.opacity = "0";
+  endingTextEl.classList.remove("pulse");
 }
 
 function resetToHeartMode() {
@@ -659,14 +665,18 @@ document.addEventListener("keydown", (e) => {
 
   if (e.key === "ArrowRight") {
     // next
+    e.preventDefault();
     storyPaused = true;
     clearTimeout(storyTimer);
     showStoryFrame(storyIndex + 1);
+    scheduleNextFrame(); // Resume auto-play
   } else if (e.key === "ArrowLeft") {
     // prev
+    e.preventDefault();
     storyPaused = true;
     clearTimeout(storyTimer);
     showStoryFrame(storyIndex - 1);
+    scheduleNextFrame(); // Resume auto-play
   } else if (e.key === " " || e.code === "Space") {
     // pause/resume
     e.preventDefault();
@@ -783,3 +793,6 @@ btnHeartStory.addEventListener("click", (e) => {
     count: 16,
   });
 });
+
+// Chỉ dùng ảnh từ nay, không cần video helper
+

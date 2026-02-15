@@ -1,24 +1,58 @@
 import os
+from PIL import Image
 
-def rename_files(folder_path):
-    # Lấy danh sách file và sắp xếp theo tên để đảm bảo thứ tự
-    files = sorted([f for f in os.listdir(folder_path) if os.path.isfile(os.path.join(folder_path, f))])
+def process_images(folder_path, start_number=21):
+    # Tạo thư mục output để tránh ghi đè làm mất ảnh gốc nếu lỗi
+    output_folder = os.path.join(folder_path, "Processed")
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
+
+    # Lấy danh sách file ảnh
+    valid_extensions = ('.jpg', '.jpeg', '.png')
+    files = sorted([f for f in os.listdir(folder_path) if f.lower().endswith(valid_extensions)])
     
-    for index, filename in enumerate(files, start=1):
-        # Lấy phần mở rộng của file (ví dụ: .jpg, .png)
-        file_extension = os.path.splitext(filename)[1]
-        
-        # Tạo tên mới (ví dụ: 1.jpg, 2.jpg)
-        new_name = f"{index}{file_extension}"
-        
-        # Đường dẫn đầy đủ
-        old_path = os.path.join(folder_path, filename)
-        new_path = os.path.join(folder_path, new_name)
-        
-        # Đổi tên
-        os.rename(old_path, new_path)
-        print(f"Đã đổi: {filename} -> {new_name}")
+    target_width = 1080
+    target_height = 1350
+    target_ratio = target_width / target_height
 
-# Thay đường dẫn thư mục của bạn vào đây
-path = r'D:\y4\code\1\videos'
-rename_files(path)
+    for index, filename in enumerate(files):
+        try:
+            old_path = os.path.join(folder_path, filename)
+            with Image.open(old_path) as img:
+                # --- LOGIC CROP 4:5 TỪ TÂM ---
+                width, height = img.size
+                current_ratio = width / height
+
+                if current_ratio > target_ratio:
+                    # Ảnh quá rộng -> cắt bớt chiều rộng
+                    new_width = height * target_ratio
+                    left = (width - new_width) / 2
+                    top = 0
+                    right = (width + new_width) / 2
+                    bottom = height
+                else:
+                    # Ảnh quá cao -> cắt bớt chiều cao
+                    new_height = width / target_ratio
+                    left = 0
+                    top = (height - new_height) / 2
+                    right = width
+                    bottom = (height + new_height) / 2
+
+                # Thực hiện Crop và Resize
+                img_cropped = img.crop((left, top, right, bottom))
+                img_final = img_cropped.resize((target_width, target_height), Image.LANCZOS)
+
+                # --- ĐỔI TÊN THEO SỐ THỨ TỰ (Bắt đầu từ 21) ---
+                new_name = f"{start_number + index}.jpg"
+                new_path = os.path.join(output_folder, new_name)
+
+                # Lưu ảnh (ép về định dạng RGB để lưu dưới dạng .jpg)
+                img_final.convert('RGB').save(new_path, "JPEG", quality=95)
+                print(f"Thành công: {filename} -> {new_name}")
+
+        except Exception as e:
+            print(f"Lỗi khi xử lý {filename}: {e}")
+
+# Đường dẫn của bạn
+path = r'D:\y4\code\img\New folder' # Sửa lại đường dẫn (bỏ chữ D thừa ở đầu)
+process_images(path, start_number=21)
