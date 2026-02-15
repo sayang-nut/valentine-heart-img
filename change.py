@@ -20,5 +20,5 @@ def rename_files(folder_path):
         print(f"Đã đổi: {filename} -> {new_name}")
 
 # Thay đường dẫn thư mục của bạn vào đây
-path = r'D:\y4\code\img\40'
+path = r'D:\y4\code\1\videos'
 rename_files(path)

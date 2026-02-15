@@ -40,15 +40,16 @@ function getCaptionFromData(photoId) {
 // Cho phép xen lẫn ảnh & video
 // - Mặc định: type = "image"
 // - Với những id bạn muốn là video, khai báo thêm trong videoConfig
+// THÊM MỚI: Chèn caption trực tiếp vào đây
 const videoConfig = {
-  // ví dụ: id 5 và 12 là video
   5: {
     src: "videos/5.mp4",
+    caption: "Video kỷ niệm chúng mình đi chơi ở Đà Lạt ❤️"
   },
   12: {
     src: "videos/12.mp4",
-  },
-  // bạn tự thêm/bớt các id video ở đây
+    caption: "Lúc em đang tập làm video bằng DaVinci Resolve nè!"
+  }
 };
 
 const photos = Array.from({ length: IMAGE_COUNT }, (_, index) => {
@@ -60,7 +61,7 @@ const photos = Array.from({ length: IMAGE_COUNT }, (_, index) => {
       id,
       type: "video",
       src: videoConfig[id].src,      // đường dẫn file .mp4
-      caption: getCaptionFromData(id),
+      caption: videoConfig[id].caption || getCaptionFromData(id),
     };
   }
 
@@ -582,6 +583,7 @@ function showStoryFrame(index) {
 
   updateProgressBar();
 }
+
 
 function scheduleNextFrame() {
   if (!storyRunning || storyPaused) return;
