@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <title>Valentine – Image Heart Collage</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Progress bar trên cùng -->
+  <div class="progress-bar-container">
+    <div id="progress-bar" class="progress-bar-fill"></div>
+  </div>
+
+  <!-- Canvas particle background -->
+  <canvas id="particle-canvas"></canvas>
+  
+   <!--  Canvas fairy dust quanh trái tim -->
+  <canvas id="fairy-canvas"></canvas>
+
+   <!--Intro countdown 3 2 1 hình trái tim -->
+  <div id="intro-countdown" class="intro-countdown">
+    <div class="intro-inner">
+      <div class="intro-heart">
+        <span id="intro-number" class="intro-number">3</span>
+      </div>
+      <p class="intro-subtitle">
+        Our little love story is about to start...
+      </p>
+    </div>
+
+    <!-- THÊM MỚI: lớp “boom” nổ màu -->
+    <div id="intro-boom" class="intro-boom"></div>
+  </div>
+  
+  <div class="app">
+    <!-- HEART MODE -->
+    <div id="heart-mode" class="heart-mode active">
+      <div class="top-ui">
+        <div class="title-block">
+          <h1 class="main-title">Our Little Love Story</h1>
+          <p class="subtitle">Những khoảnh khắc nhỏ, ghép lại thành một trái tim to.</p>
+        </div>
+      </div>
+
+      <div id="heart-collage" class="heart-collage"></div>
+
+      <div class="bottom-ui">
+        <button id="play-story" class="btn-play">
+          <span class="btn-label">Play our story</span>
+        </button>
+        <!-- Like & Heart buttons -->
+        <div class="reaction-buttons">
+          <button id="btn-like" class="reaction-btn reaction-like" aria-label="Like">
+            <span>👍</span>
+          </button>
+          <button id="btn-heart" class="reaction-btn reaction-heart" aria-label="Heart">
+            <span>❤</span>
+          </button>
+        </div>
+      </div>
+
+      <p class="hint-text">
+        Tip: Dùng phím mũi tên ← → để tua ảnh trong Story Mode, 
+        phím Space để tạm dừng / tiếp tục. Enter để trở lại màn hình chính
+      </p>
+    </div>
+
+    <!-- STORY MODE -->
+    <div id="story-mode" class="story-mode">
+      <div class="story-content">
+        <div class="story-image-wrap">
+           <div id="story-media-container"></div>
+        </div>
+        <div class="story-controls-wrap">
+          <div class="story-caption-wrap">
+            <p id="story-caption" class="story-caption"></p>
+          </div>
+          <!-- Like & Heart buttons in Story Mode -->
+          <div class="reaction-buttons story-reaction-buttons">
+            <button id="btn-like-story" class="reaction-btn reaction-like" aria-label="Like">
+              <span>👍</span>
+            </button>
+            <button id="btn-heart-story" class="reaction-btn reaction-heart" aria-label="Heart">
+              <span>❤</span>
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <div class="story-overlay">
+        <h2 id="ending-text" class="ending-text">
+          Happy Valentine’s Day ❤️
+        </h2>
+      </div>
+    </div>
+  </div>
+
+  <!-- Container cho các “bọt” reaction -->
+  <div id="reaction-layer" class="reaction-layer"></div>
+
+  <script src="main.js"></script>
+</body>
+</html>

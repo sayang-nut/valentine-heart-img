@@ -1,0 +1,22 @@
+# Bỏ qua file biên dịch Python
+__pycache__/
+*.py[cod]
+
+# Bỏ qua file môi trường ảo
+venv/
+env/
+
+# Bỏ qua file log
+*.log
+
+# Bỏ qua file cấu hình hệ thống
+.DS_Store
+Thumbs.db
+
+# Bỏ qua file tạm thời của Windows
+*.tmp
+*.bak
+
+# Bỏ qua file từ IDE (VS Code, PyCharm)
+.vscode/
+.idea/

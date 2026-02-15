@@ -1,0 +1,806 @@
+:root {
+  --bg-black: #000000;
+  --primary-pink: #ff5c8a;
+  --rose-red: #ff2e63;
+  --soft-blush: #ffd6e0;
+  --white: #ffffff;
+  --muted-gray: #b3b3b3;
+
+   --rose-gold-line: #b76e79;      /* Rose gold base [web:17] */
+  --white-metallic-line: #f7f3ff; /* Trắng hơi ánh tím nhẹ [web:17] */
+
+  --font-heading: "Playfair Display", serif;
+  --font-body: "Poppins", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+
+  --heart-image-size: 90px;
+  --heart-image-radius: 12px;
+
+  --transition-fast: 200ms ease-out;
+  --transition-normal: 400ms cubic-bezier(0.22, 0.61, 0.36, 1);
+
+    /* THÊM MỚI: màu intro countdown */
+  --intro-bg: radial-gradient(circle at top, #1b0014, #000000 70%);
+  --intro-heart-fill: #350017;
+  --intro-heart-border: rgba(255, 92, 138, 0.95);
+  --intro-number-color: #ffd6e0;
+
+  
+}
+
+/* RESET */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+}
+
+body {
+  background-color: var(--bg-black);
+  color: var(--white);
+  font-family: var(--font-body);
+  overflow: hidden;
+}
+
+/* Progress bar */
+.progress-bar-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: rgba(255, 92, 138, 0.12);
+  z-index: 3;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--primary-pink), var(--rose-red));
+  transition: width 300ms ease-out;
+}
+
+/* Canvas background */
+#particle-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  z-index: 0;
+}
+/* Canvas fairy dust quanh trái tim */
+#fairy-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  z-index: 1; /* trên canvas nền, dưới app UI */
+  pointer-events: none;
+}
+
+
+/* App */
+.app {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+/* THÊM MỚI: Overlay intro countdown toàn màn hình */
+.intro-countdown {
+  position: fixed;
+  inset: 0;
+  z-index: 999; /* cao nhất, che hết mọi thứ lúc đầu */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--intro-bg);
+  color: var(--soft-blush);
+  pointer-events: auto;
+}
+
+/* Ẩn đi sau khi kết thúc (JS sẽ thêm class .hidden) */
+.intro-countdown.hidden {
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 600ms ease-out;
+}
+
+.intro-inner {
+  position: relative;
+  text-align: center;
+}
+
+/* Trái tim countdown */
+/* SỬA: cố định kích thước trái tim đúng tỉ lệ với path (240x210) */
+.intro-heart {
+  position: relative;
+  width: 240px;
+  height: 210px;
+  margin: 0 auto;
+  background:
+    var(--intro-heart-fill); /* tạm để nền phẳng, gradient ta xử lý bằng ::after bên dưới */
+  border-radius: 40px;
+  clip-path: path('M120,210 C120,210 0,140 0,70 A60,60 0 0,1 120,70 A60,60 0 0,1 240,70 C240,140 120,210 120,210 Z');
+  box-shadow:
+    0 0 24px rgba(255, 92, 138, 0.7),
+    0 0 80px rgba(255, 44, 99, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: introHeartBeat 1s ease-in-out infinite;
+  overflow: hidden; /* để khi thêm ::after không tràn ra ngoài */
+}
+/* THÊM: viền trái tim bằng pseudo-element để tránh cấn mép clip-path */
+.intro-heart::before {
+  content: "";
+  position: absolute;
+  inset: -2px; /* nới ra ngoài 2px, tạo đường viền ôm quanh */
+  border: 2px solid var(--intro-heart-border);
+  border-radius: 40px;
+  clip-path: inherit; /* dùng lại path của trái tim */
+  pointer-events: none;
+}
+/* THÊM: lớp gradient bên trong, cách mép 2px để không ảnh hưởng viền */
+.intro-heart::after {
+  content: "";
+  position: absolute;
+  inset: 2px; /* cách mép một chút */
+  border-radius: 36px;
+  clip-path: inherit;
+  background:
+    radial-gradient(circle at 30% 0%, rgba(255, 92, 138, 0.35), transparent 55%),
+    radial-gradient(circle at 70% 100%, rgba(255, 214, 224, 0.25), transparent 60%);
+}
+
+
+/* Số 3 2 1 */
+.intro-number {
+  font-family: var(--font-heading);
+  font-size: clamp(52px, 8vw, 80px);
+  color: var(--intro-number-color);
+  text-shadow: 0 0 18px rgba(255, 214, 224, 0.8);
+  opacity: 0;
+  transform: scale(0.6);
+}
+
+/* Subtitle nho nhỏ */
+.intro-subtitle {
+  margin-top: 16px;
+  font-size: 13px;
+  color: var(--muted-gray);
+}
+
+/* Animation nhịp tim cho trái tim intro */
+@keyframes introHeartBeat {
+  0% {
+    transform: scale(1);
+  }
+  25% {
+    transform: scale(1.06);
+  }
+  40% {
+    transform: scale(1);
+  }
+  60% {
+    transform: scale(1.04);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Animation cho từng số khi xuất hiện */
+.intro-number.show {
+  animation: introNumberIn 800ms ease-out forwards;
+}
+
+@keyframes introNumberIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Lớp “boom” nổ màu toàn màn hình */
+.intro-boom {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: rgba(255, 92, 138, 0.7);
+  opacity: 0;
+  transform: scale(0.1);
+  pointer-events: none;
+}
+
+/* JS sẽ thêm class .boom-active ở cuối countdown */
+.intro-boom.boom-active {
+  animation: introBoomExpand 900ms ease-out forwards;
+}
+
+@keyframes introBoomExpand {
+  0% {
+    opacity: 0.7;
+    transform: scale(0.2);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(3);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(5);
+  }
+}
+
+/* Animation zoom trái tim ra từ từ sau boom */
+.intro-heart.heart-zoom-out {
+  animation: heartZoomOut 1500ms ease-out forwards;
+  animation-delay: 400ms;
+}
+
+@keyframes heartZoomOut {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+    filter: brightness(1.1);
+  }
+  100% {
+    opacity: 0.3;
+    transform: scale(3);
+    filter: brightness(0.8) blur(1px);
+  }
+}
+
+/* Animation fade-in cho màn hình chính */
+.heart-mode.fade-in-screen {
+  animation: screenFadeIn 800ms ease-out forwards;
+  animation-delay: 900ms;
+}
+
+@keyframes screenFadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* Intro trên mobile: co nhỏ trái tim chút */
+@media (max-width: 600px) {
+  .intro-heart {
+    width: 180px;
+    height: 160px;
+  }
+}
+
+/* HEART MODE */
+.heart-mode {
+  position: relative;
+  text-align: center;
+  max-width: 900px;
+  width: 100%;
+  padding: 40px 16px 48px;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  opacity: 1;
+}
+
+.heart-mode.active {
+  display: flex;
+}
+
+/* Trong intro, heart-mode sẽ có opacity 0 để fade-in sau */
+.heart-mode.fade-in-screen {
+  display: flex !important;
+  opacity: 0;
+}
+
+.top-ui {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.bottom-ui {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.title-block {
+  text-align: left;
+}
+
+.main-title {
+  font-family: var(--font-heading);
+  font-size: clamp(26px, 3.3vw, 40px);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--soft-blush);
+}
+
+.subtitle {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--muted-gray);
+}
+
+/* reaction buttons */
+.reaction-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.reaction-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 92, 138, 0.7);
+  background: rgba(0, 0, 0, 0.8);
+  color: var(--soft-blush);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 0 0 rgba(255, 92, 138, 0.35);
+  transition:
+    transform 150ms ease-out,
+    box-shadow 200ms ease-out,
+    background 200ms ease-out;
+}
+
+.reaction-btn span {
+  pointer-events: none;
+}
+
+.reaction-btn:hover {
+  transform: translateY(-1px) scale(1.05);
+  background: radial-gradient(circle at 0% 0%, rgba(255, 92, 138, 0.3), rgba(0, 0, 0, 0.9));
+  box-shadow: 0 0 14px rgba(255, 92, 138, 0.7);
+}
+
+.reaction-btn:active {
+  transform: scale(0.96);
+}
+
+/* Heart collage layout */
+.heart-collage {
+  position: relative;
+  width: min(480px, 80vw);
+  height: min(420px, 70vh);
+  margin: 0 auto 28px;
+  transform: translateZ(0);
+  /* border-radius: 40px;
+  border: 1px solid rgba(255, 92, 138, 0.7); /* viền trái tim hồng (group) */
+  background: rgba(255, 92, 138, 0.15); /* Tạo một lớp nền hồng nhạt hình trái tim */
+  clip-path: path('M240,420 C240,420 0,280 0,140 A120,120 0 0,1 240,140 A120,120 0 0,1 480,140 C480,280 240,420 240,420 Z');
+  
+  box-shadow: 0 0 32px rgba(255, 92, 138, 0.35);
+  overflow: visible;
+}
+
+.heart-image {
+  position: absolute;
+  width: var(--heart-image-size);
+  height: var(--heart-image-size);
+  border-radius: var(--heart-image-radius);
+  object-fit: cover;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+  transform: translate(-50%, -50%) scale(0.6);
+  opacity: 0;
+  transition:
+    transform var(--transition-normal),
+    opacity var(--transition-normal),
+    filter var(--transition-fast),
+    box-shadow var(--transition-fast);
+  will-change: transform, opacity, filter;
+}
+
+.heart-collage.pulsing {
+  animation: heartPulse 2800ms ease-in-out infinite;
+}
+
+@keyframes heartPulse {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.03);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.heart-image:hover {
+  transform: translate(-50%, -50%) scale(1.05);
+  filter: brightness(1.12) contrast(1.06);
+  box-shadow: 0 10px 26px rgba(255, 92, 138, 0.55);
+}
+
+.heart-caption {
+  position: absolute;
+  bottom: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.6);
+  color: var(--white);
+  font-size: 11px;
+  line-height: 1.3;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  translate: 0 8px;
+  transition: opacity 150ms ease-out, translate 150ms ease-out;
+}
+
+.heart-image:hover .heart-caption {
+  opacity: 1;
+  translate: 0 0;
+}
+
+/* PLAY button */
+.btn-play {
+  position: relative;
+  border: none;
+  outline: none;
+  padding: 12px 32px;
+  border-radius: 999px;
+  background: radial-gradient(circle at 0% 0%, var(--primary-pink), var(--rose-red));
+  color: var(--white);
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 0 0 0 rgba(255, 92, 138, 0.3);
+  transition:
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast),
+    filter var(--transition-fast);
+}
+
+.btn-play::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  border: 1px solid rgba(255, 214, 224, 0.4);
+  opacity: 0.7;
+}
+
+.btn-play:hover {
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: 0 0 18px rgba(255, 92, 138, 0.55);
+  filter: brightness(1.05);
+}
+
+.btn-play:active {
+  transform: translateY(0) scale(0.99);
+  box-shadow: 0 0 8px rgba(255, 92, 138, 0.35);
+}
+
+.btn-label {
+  position: relative;
+  z-index: 1;
+}
+
+.hint-text {
+  margin-top: 10px;
+  font-size: 11px;
+  color: var(--muted-gray);
+}
+
+/* STORY MODE */
+.story-mode {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: radial-gradient(circle at top, rgba(255, 92, 138, 0.13), transparent 60%);
+  z-index: 10;
+}
+
+.story-mode.active {
+  display: flex;
+}
+
+.story-content {
+  max-width: 960px;
+  width: 100%;
+  text-align: center;
+
+  height: 90vh; /* Giới hạn chiều cao toàn bộ vùng nội dung */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.story-image-wrap {
+  width: min(640px, 90vw);
+
+  margin: 0 auto 15px;
+
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+  background: radial-gradient(circle at center, rgba(255, 92, 138, 0.1), rgba(0, 0, 0, 0.95));
+
+  flex: 1; /* Cho phép vùng chứa ảnh co giãn chiếm không gian phía trên */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-height: 70vh; /* Không bao giờ cao quá 70% màn hình */
+  width: 100%;
+}
+
+/* THÊM MỚI: media (img hoặc video) bên trong story-media-container */
+#story-media-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* THÊM MỚI: style chung cho img & video bên trong story mode */
+#story-media-container img,
+#story-media-container video {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;  /* giữ tỉ lệ, không méo */
+  border-radius: 24px;
+  display: block;
+  transform: scale(1.04);
+  opacity: 0;
+  transition: opacity 600ms ease-out, transform 600ms ease-out;
+}
+
+.story-caption-wrap {
+  width: 100%;
+  max-width: 500px;
+
+  margin: 0;
+  padding: 12px 16px 8px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.8), rgba(20, 0, 8, 0.9));
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.4);
+}
+
+.story-caption {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--soft-blush);
+}
+
+/* Story controls (caption + reaction buttons) */
+.story-controls-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  max-width: 900px;
+  margin: 0 auto;
+
+  flex-shrink: 0; /* Đảm bảo vùng này không bị co bóp mất kích thước */
+  width: 100%;
+
+}
+
+.story-reaction-buttons {
+  flex-shrink: 0;
+}
+
+/* Ending */
+.story-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  pointer-events: none;
+  padding-bottom: 40px;
+}
+
+.ending-text {
+  font-family: var(--font-heading);
+  font-size: clamp(26px, 4vw, 36px);
+  color: var(--white);
+  text-shadow: 0 0 18px rgba(255, 44, 99, 0.8);
+  opacity: 0;
+  transform: translateY(10px) scale(0.96);
+  transition: opacity 800ms ease-out, transform 800ms ease-out;
+}
+
+.ending-text.pulse {
+  animation: endingPulse 2200ms ease-in-out infinite;
+}
+
+@keyframes endingPulse {
+  0% {
+    transform: translateY(0) scale(1);
+  }
+  40% {
+    transform: translateY(-3px) scale(1.04);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Reaction bubbles layer */
+.reaction-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 4;
+  overflow: visible;
+}
+
+.reaction-bubble {
+  position: absolute;
+  font-size: 20px;
+  filter: drop-shadow(0 0 8px rgba(255, 92, 138, 0.8));
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.4);
+  animation: bubbleUp 900ms ease-out forwards;
+}
+
+@keyframes bubbleUp {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -40%) scale(0.4);
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -120%) scale(1.3);
+  }
+}
+
+/* Fullscreen glow effect */
+.fullscreen-glow {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(
+    circle at center,
+    var(--glow-color),
+    transparent 70%
+  );
+  pointer-events: none;
+  z-index: 5;
+  opacity: 0.6;
+  animation: glowPulse 800ms ease-out forwards;
+}
+
+@keyframes glowPulse {
+  0% {
+    opacity: 0.8;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 0.6;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.2);
+  }
+}
+
+/* Fullscreen glow effect */
+.fullscreen-glow {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(
+    circle at center,
+    var(--glow-color),
+    transparent 70%
+  );
+  pointer-events: none;
+  z-index: 5;
+  opacity: 0.6;
+  animation: glowPulse 800ms ease-out forwards;
+}
+
+@keyframes glowPulse {
+  0% {
+    opacity: 0.8;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 0.6;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.2);
+  }
+}
+
+
+
+/* Responsive */
+@media (max-width: 600px) {
+  :root {
+    --heart-image-size: 70px;
+    --heart-image-radius: 10px;
+  }
+
+  .top-ui {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .bottom-ui {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .reaction-buttons {
+    margin-top: 0;
+  }
+
+  .story-controls-wrap {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .subtitle {
+    font-size: 13px;
+  }
+
+  .story-caption {
+    font-size: 13px;
+  }
+
+  .intro-heart {
+    transform: scale(0.75);
+    transform-origin: center;
+  }
+}
